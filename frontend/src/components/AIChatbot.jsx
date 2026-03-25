@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, User as UserIcon } from 'lucide-react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 
 const AIChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,7 +50,7 @@ const AIChatbot = () => {
         }
       };
 
-      const { data } = await axios.post('/api/chat', { 
+      const { data } = await axios.post(`${API_BASE}/api/chat`, { 
         message: userMsg,
         history: sanitizedHistory 
       }, config);

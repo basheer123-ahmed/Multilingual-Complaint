@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { Layers, Maximize, MousePointer2, Info, Search, Filter, ShieldAlert, Activity, ShieldCheck, Zap, ArrowUpRight, Globe, Target } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -91,7 +92,7 @@ const ComplaintMap = ({ user }) => {
     if (!user) return;
     const fetchComplaints = async () => {
       try {
-        const { data } = await axios.get('/api/complaints', {
+        const { data } = await axios.get(`${API_BASE}/api/complaints`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setComplaints(data);

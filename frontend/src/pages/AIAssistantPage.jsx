@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Sparkles, FileText, CheckCircle2, Clock, MapPin, Copy, Search, ShieldAlert, ArrowRight, ClipboardList, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 
 const AIAssistantPage = ({ user }) => {
   const [complaints, setComplaints] = useState([]);
@@ -17,7 +18,7 @@ const AIAssistantPage = ({ user }) => {
     const fetchComplaints = async () => {
       try {
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
-        const { data } = await axios.get('/api/complaints', config);
+        const { data } = await axios.get(`${API_BASE}/api/complaints`, config);
         // Only show unassigned / pending complaints
         const pending = data.filter(c => c.status === 'Submitted' || c.status === 'Assigned' || c.status === 'Investigation Ongoing');
         setComplaints(pending);
@@ -47,7 +48,7 @@ const AIAssistantPage = ({ user }) => {
     try {
       const textToAnalyze = selectedComplaint.translatedText || selectedComplaint.originalDescription || selectedComplaint.description;
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.post('/api/complaints/analyze-complaint', { text: textToAnalyze }, config);
+      const { data } = await axios.post(`${API_BASE}/api/complaints/analyze-complaint`, { text: textToAnalyze }, config);
       setResult(data);
     } catch (err) {
       setError(err.response?.data?.message || 'AI Engine failed to process the request.');
@@ -62,7 +63,7 @@ const AIAssistantPage = ({ user }) => {
     setError('');
     try {
        const config = { headers: { Authorization: `Bearer ${user.token}` } };
-       await axios.put(`/api/admin/fir/${selectedComplaint._id}`, { firData: result }, config);
+       await axios.put(`${API_BASE}/api/admin/fir/${selectedComplaint._id}`, { firData: result }, config);
        setAttached(true);
        
        // Update local selected state visually

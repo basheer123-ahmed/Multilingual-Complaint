@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { Mail, Lock, Shield, ArrowRight, Loader, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -18,7 +19,7 @@ const LoginPage = ({ setUser }) => {
     setError('');
 
     try {
-      const { data } = await axios.post('/api/auth/login', { email, password });
+      const { data } = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
       sessionStorage.setItem('userInfo', JSON.stringify(data));
       setUser(data);
       

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -48,7 +49,7 @@ const ComplaintForm = ({ user, onSuccess }) => {
     if (!text || text.length < 10) return null;
     setAiAnalysis(prev => ({ ...prev, loading: true }));
     try {
-      const { data } = await axios.post('/api/complaints/analyze-complaint', { text }, {
+      const { data } = await axios.post(`${API_BASE}/api/complaints/analyze-complaint`, { text }, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       const result = {
@@ -162,7 +163,7 @@ const ComplaintForm = ({ user, onSuccess }) => {
         if (!file.type.startsWith('image/')) continue;
         try {
           const base64 = await fileToBase64(file);
-          const { data } = await axios.post('/api/vision/verify', {
+          const { data } = await axios.post(`${API_BASE}/api/vision/verify`, {
             imageBase64: base64,
             category: formData.category,
             description: formData.description
@@ -196,7 +197,7 @@ const ComplaintForm = ({ user, onSuccess }) => {
     };
 
     try {
-      await axios.post('/api/complaints', payload, {
+      await axios.post(`${API_BASE}/api/complaints`, payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setSuccess(true);

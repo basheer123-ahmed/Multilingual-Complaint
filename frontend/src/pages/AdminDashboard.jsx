@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { 
   ShieldAlert, 
   Users, 
@@ -78,9 +79,9 @@ const AdminDashboard = ({ user }) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const [cRes, oRes, aRes] = await Promise.all([
-        axios.get('/api/complaints', config),
-        axios.get('/api/admin/officers', config),
-        axios.get('/api/admin/analytics', config)
+        axios.get(`${API_BASE}/api/complaints`, config),
+        axios.get(`${API_BASE}/api/admin/officers`, config),
+        axios.get(`${API_BASE}/api/admin/analytics`, config)
       ]);
       setData({ complaints: cRes.data, officers: oRes.data, analytics: aRes.data });
     } catch (err) {
@@ -169,7 +170,7 @@ const AdminDashboard = ({ user }) => {
     
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.delete(`/api/departments/${deptId}`, config);
+      await axios.delete(`${API_BASE}/api/departments/${deptId}`, config);
       await fetchAdminData();
     } catch (err) {
       console.error('Sector Decommission failed:', err);

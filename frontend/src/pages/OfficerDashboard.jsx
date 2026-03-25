@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { motion } from 'framer-motion';
 import { 
   Archive,
@@ -34,10 +35,10 @@ const OfficerDashboard = ({ user }) => {
     setLoading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('/api/complaints/assigned', config);
+      const { data } = await axios.get(`${API_BASE}/api/complaints/assigned`, config);
       setComplaints(data);
       
-      const profileRes = await axios.get('/api/auth/profile', config);
+      const profileRes = await axios.get(`${API_BASE}/api/auth/profile`, config);
       setProfile(profileRes.data);
     } catch (err) {
       console.error('Error fetching officer data:', err);

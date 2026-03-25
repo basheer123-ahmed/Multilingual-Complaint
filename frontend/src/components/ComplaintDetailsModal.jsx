@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { ShieldCheck, Send, Clock, CheckCircle2, AlertCircle, X, ArrowUpRight, ShieldAlert, Activity, Command, Zap } from 'lucide-react';
 
 const ComplaintDetailsModal = ({ isOpen, onClose, complaint, role, user, onUpdate }) => {
@@ -40,7 +41,7 @@ const ComplaintDetailsModal = ({ isOpen, onClose, complaint, role, user, onUpdat
           try {
             const base64 = await fileToBase64(completionImage);
             // Non-blocking verification attempt
-            axios.post('/api/vision/verify-completion', {
+            axios.post(`${API_BASE}/api/vision/verify-completion`, {
                 imageBase64: base64,
                 originalCategory: complaint.category,
                 originalDescription: complaint.description
@@ -53,7 +54,7 @@ const ComplaintDetailsModal = ({ isOpen, onClose, complaint, role, user, onUpdat
           setVerificationLoading(false);
       }
 
-      await axios.put(`/api/complaints/${complaint._id}`, {
+      await axios.put(`${API_BASE}/api/complaints/${complaint._id}`, {
         status: newStatus,
         remarks: remarks,
         resolutionEvidenceUrl: finalResolutionUrl
@@ -88,7 +89,7 @@ const ComplaintDetailsModal = ({ isOpen, onClose, complaint, role, user, onUpdat
     setError('');
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.put(`/api/complaints/${complaint._id}/rate`, {
+      await axios.put(`${API_BASE}/api/complaints/${complaint._id}/rate`, {
         rating,
         feedback
       }, config);

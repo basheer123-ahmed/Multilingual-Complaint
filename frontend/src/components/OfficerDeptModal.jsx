@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Building, ShieldCheck, AlertCircle } from 'lucide-react';
 
@@ -25,7 +26,7 @@ const OfficerDeptModal = ({ isOpen, onClose, officer, user, departments, onUpdat
     setError('');
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.put(`/api/admin/officer/${officer._id}/department`, {
+      await axios.put(`${API_BASE}/api/admin/officer/${officer._id}/department`, {
         departmentId: selectedDept
       }, config);
       onUpdate();

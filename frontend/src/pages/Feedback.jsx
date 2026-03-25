@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Send, ShieldCheck, CheckCircle2, ChevronRight, Zap, Info, ArrowUpRight, ArrowRight, Activity, Users, Globe, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import API_BASE from '../config/api';
 
 const Feedback = ({ user }) => {
   // Platform Feedback State
@@ -33,7 +34,7 @@ const Feedback = ({ user }) => {
     setLoadingComps(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('/api/complaints/my', config);
+      const { data } = await axios.get(`${API_BASE}/api/complaints/my`, config);
       const unrated = data.filter(c => (c.status === 'Resolved' || c.status === 'Closed') && !c.rating);
       setResolvedComplaints(unrated);
     } catch (err) {
@@ -47,7 +48,7 @@ const Feedback = ({ user }) => {
     setLoadingGlobal(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('/api/complaints/platform-feedback', config);
+      const { data } = await axios.get(`${API_BASE}/api/complaints/platform-feedback`, config);
       setGlobalFeedbacks(data);
     } catch (err) {
       console.error('Failure to retrieve global pulse:', err);
@@ -63,7 +64,7 @@ const Feedback = ({ user }) => {
     setSubmittingPlatform(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.post('/api/complaints/platform-feedback', {
+      await axios.post(`${API_BASE}/api/complaints/platform-feedback`, {
         rating: platformRating,
         factors: selectedFactors,
         remarks: remarks
@@ -82,7 +83,7 @@ const Feedback = ({ user }) => {
     setSubmittingOfficer(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.put(`/api/complaints/${selectedComp._id}/rate`, {
+      await axios.put(`${API_BASE}/api/complaints/${selectedComp._id}/rate`, {
         rating: officerRating,
         feedback: officerFeedback
       }, config);

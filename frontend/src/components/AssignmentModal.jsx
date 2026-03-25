@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, Building, ShieldCheck, AlertCircle, Zap } from 'lucide-react';
 
@@ -82,8 +83,8 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const [deptRes, officerRes] = await Promise.all([
-        axios.get('/api/departments', config),
-        axios.get('/api/admin/officers', config)
+        axios.get(`${API_BASE}/api/departments`, config),
+        axios.get(`${API_BASE}/api/admin/officers`, config)
       ]);
       setDepartments(deptRes.data);
       setOfficers(officerRes.data);
@@ -104,7 +105,7 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
     setError('');
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.put(`/api/admin/assign/${complaint._id}`, {
+      await axios.put(`${API_BASE}/api/admin/assign/${complaint._id}`, {
         departmentId: selectedDept,
         officerId: selectedOfficer
       }, config);
@@ -122,7 +123,7 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
     setError('');
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.put(`/api/admin/assign/${complaint._id}`, {
+      await axios.put(`${API_BASE}/api/admin/assign/${complaint._id}`, {
         departmentId: suggest.department._id,
         officerId: suggest.officer._id
       }, config);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE from '../config/api';
 import { 
   PlusCircle, 
   Clock, 
@@ -31,7 +32,7 @@ const CitizenDashboard = ({ user }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data } = await axios.get('/api/complaints/my', {
+      const { data } = await axios.get(`${API_BASE}/api/complaints/my`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setComplaints(data.slice(0, 5));

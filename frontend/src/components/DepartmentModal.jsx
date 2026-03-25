@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Building, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
+import API_BASE from '../config/api';
 
 const DepartmentModal = ({ isOpen, onClose, user, onUpdate }) => {
   const [name, setName] = useState('');
@@ -13,7 +14,7 @@ const DepartmentModal = ({ isOpen, onClose, user, onUpdate }) => {
     setLoading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      await axios.post('/api/departments', { 
+      await axios.post(`${API_BASE}/api/departments`, { 
         name, 
         categoriesHandled: categories.split(',').map(c => c.trim()).filter(c => c)
       }, config);
