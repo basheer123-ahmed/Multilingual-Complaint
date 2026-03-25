@@ -12,7 +12,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, dob, rank } = req.body;
 
   try {
     const userExists = await User.findOne({ email });
@@ -21,12 +21,21 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Generate a random ID if officer
+    let officerId = undefined;
+    if (role.toUpperCase() === 'OFFICER') {
+      officerId = `OFF-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
     const user = await User.create({
       name,
       email,
       phone,
       password,
-      role: role.toUpperCase()
+      role: role.toUpperCase(),
+      officerId,
+      dob,
+      rank: role.toUpperCase() === 'OFFICER' ? rank : null
     });
 
     if (user) {
@@ -35,6 +44,8 @@ const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        officerId: user.officerId,
+        rank: user.rank,
         token: generateToken(user._id)
       });
     } else {
@@ -43,6 +54,18 @@ const registerUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+const calculateAge = (dob) => {
+  if (!dob) return 0;
+  const today = new Date();
+  const birthDate = new Date(dob);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
 };
 
 // @desc    Auth user & get token
@@ -63,6 +86,9 @@ const authUser = async (req, res) => {
         role: fullUser.role,
         department: fullUser.departmentId?.name,
         departmentId: fullUser.departmentId?._id,
+        officerId: fullUser.officerId,
+        rank: fullUser.rank,
+        age: calculateAge(fullUser.dob),
         token: generateToken(fullUser._id)
       });
     } else {
@@ -87,7 +113,9 @@ const getUserProfile = async (req, res) => {
       email: fullUser.email,
       role: fullUser.role,
       department: fullUser.departmentId?.name,
-      departmentId: fullUser.departmentId?._id
+      departmentId: fullUser.departmentId?._id,
+      rank: fullUser.rank,
+      age: calculateAge(fullUser.dob)
     });
   } else {
     res.status(404).json({ message: 'User not found' });

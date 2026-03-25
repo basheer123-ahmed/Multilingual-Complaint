@@ -8,10 +8,10 @@ import 'leaflet.heat';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const createDotIcon = (color) => L.divIcon({
+const createDotIcon = (color, isBlinking) => L.divIcon({
   className: 'custom-dot-icon',
   html: `<div style="display:flex; align-items:center; justify-content:center; width:32px; height:32px;">
-            <div class="marker-pulse" style="width:16px; height:16px; background-color:${color}; border:2px solid white; border-radius:50%; box-shadow: 0 0 8px rgba(0,0,0,0.3); --pulse-color: ${color}cc;"></div>
+            <div class="${isBlinking ? 'marker-pulse' : ''}" style="width:16px; height:16px; background-color:${color}; border:2px solid white; border-radius:50%; box-shadow: 0 0 8px rgba(0,0,0,0.3); --pulse-color: ${color}cc;"></div>
          </div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 16],
@@ -114,9 +114,9 @@ const ComplaintMap = ({ user }) => {
   }
 
   const getMarkerColor = (complaint) => {
+    if (['Resolved', 'Closed', 'Feedback Pending', 'Completed'].includes(complaint.status)) return '#10b981'; 
+    if (['In Progress', 'Work In Progress', 'Assigned to Responsible Department Officer', 'Assigned'].includes(complaint.status)) return '#f59e0b'; 
     if (complaint.priority === 'High' || complaint.priority === 'Critical') return '#ef4444'; 
-    if (complaint.status === 'In Progress' || complaint.status === 'Assigned') return '#f59e0b'; 
-    if (complaint.status === 'Resolved' || complaint.status === 'Closed') return '#10b981'; 
     return '#3b82f6'; 
   };
 
@@ -191,7 +191,7 @@ const ComplaintMap = ({ user }) => {
                     <Marker 
                       key={c._id} 
                       position={[pos.lat, pos.lng]} 
-                      icon={createDotIcon(getMarkerColor(c))}
+                      icon={createDotIcon(getMarkerColor(c), !['Closed'].includes(c.status))}
                     >
                       <Popup className="custom-popup">
                         <div className="flex flex-col gap-3 min-w-[240px] p-2">
@@ -232,7 +232,7 @@ const ComplaintMap = ({ user }) => {
                            <Target size={12} className="text-primary-400" />
                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Protocol Density</span>
                         </div>
-                        <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">{complaints.length} SECTOR FEEDS</span>
+                        <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">{complaints.filter(c => !['Resolved', 'Closed', 'Feedback Pending', 'Completed'].includes(c.status)).length} SECTOR FEEDS</span>
                      </div>
                      <div className="w-[1px] h-12 bg-white/10"></div>
                      <div className="flex flex-col gap-1.5">
@@ -241,7 +241,7 @@ const ComplaintMap = ({ user }) => {
                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Critical Alert</span>
                         </div>
                         <span className="text-xl font-black text-rose-400 tracking-tighter uppercase whitespace-nowrap">
-                          {complaints.filter(c => c.priority === 'High' || c.priority === 'Critical').length} HIGH SEVERITY
+                          {complaints.filter(c => !['Resolved', 'Closed', 'Feedback Pending', 'Completed'].includes(c.status) && (c.priority === 'High' || c.priority === 'Critical')).length} HIGH SEVERITY
                         </span>
                      </div>
                   </div>

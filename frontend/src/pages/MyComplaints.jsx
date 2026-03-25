@@ -186,6 +186,7 @@ const MyComplaints = ({ user }) => {
         complaint={selectedComplaint} 
         role="CITIZEN"
         user={user}
+        onUpdate={fetchComplaints}
       />
     </motion.div>
   );

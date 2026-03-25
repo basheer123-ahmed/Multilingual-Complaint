@@ -14,32 +14,58 @@ import MyComplaints from './pages/MyComplaints';
 import ComplaintMap from './pages/ComplaintMap';
 import Feedback from './pages/Feedback';
 import Profile from './pages/Profile';
+import FeaturesPage from './pages/FeaturesPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import AIIntelligencePage from './pages/AIIntelligencePage';
+import AIChatbot from './components/AIChatbot';
+import './adaptive.css';
 
 const App = () => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    // Basic local storage auth check (simplified for initial demo)
-    const storedUser = localStorage.getItem('userInfo');
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
+  const [user, setUser] = useState(() => {
+    const savedUser = sessionStorage.getItem('userInfo');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={`min-h-screen bg-slate-50 ${user?.age > 50 ? 'adaptive-active' : ''}`}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={
            <>
              <Navbar user={user} setUser={setUser} />
-             <main className="container mx-auto px-4 pt-28 pb-12">
+             <main className="w-full">
                <LandingPage />
+             </main>
+           </>
+        } />
+        <Route path="/features" element={
+           <>
+             <Navbar user={user} setUser={setUser} />
+             <main className="w-full">
+               <FeaturesPage />
+             </main>
+           </>
+        } />
+        <Route path="/how-it-works" element={
+           <>
+             <Navbar user={user} setUser={setUser} />
+             <main className="w-full">
+               <HowItWorksPage />
+             </main>
+           </>
+        } />
+        <Route path="/ai-intelligence" element={
+           <>
+             <Navbar user={user} setUser={setUser} />
+             <main className="w-full">
+               <AIIntelligencePage />
              </main>
            </>
         } />
         <Route path="/login" element={
            <>
              <Navbar user={user} setUser={setUser} />
-             <main className="container mx-auto px-4 pt-28 pb-12">
+             <main className="w-full">
                <LoginPage setUser={setUser} />
              </main>
            </>
@@ -47,7 +73,7 @@ const App = () => {
         <Route path="/register" element={
            <>
              <Navbar user={user} setUser={setUser} />
-             <main className="container mx-auto px-4 pt-28 pb-12">
+             <main className="w-full">
                <RegisterPage setUser={setUser} />
              </main>
            </>
@@ -75,6 +101,7 @@ const App = () => {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <AIChatbot />
     </div>
   );
 };

@@ -22,6 +22,22 @@ const protect = async (req, res, next) => {
   }
 };
 
+const softProtect = async (req, res, next) => {
+  let token;
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      if (token && token !== 'undefined' && token !== 'null') {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
+        req.user = await User.findById(decoded.id).select('-password');
+      }
+    } catch (error) {
+      // Just proceed as anonymous
+    }
+  }
+  next();
+};
+
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'ADMIN') {
     return next();
@@ -38,4 +54,4 @@ const officer = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin, officer };
+module.exports = { protect, softProtect, admin, officer };

@@ -1,9 +1,10 @@
-import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ComplaintForm from '../components/ComplaintForm';
 
 const SubmitComplaint = ({ user }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1400px] mx-auto">
       <header className="header-box flex flex-col gap-4 relative group">
@@ -13,17 +14,17 @@ const SubmitComplaint = ({ user }) => {
             <Link to="/citizen/dashboard" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white border border-white/5">
               <ArrowLeft size={18} />
             </Link>
-            <span className="text-[10px] font-black text-primary-400 uppercase tracking-[0.3em]">Grievance Portal: Initiative</span>
+            <span className="text-[10px] font-black text-primary-400 uppercase tracking-[0.3em]">Police Portal: Intelligence</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">Initialize Report</h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">Report Incident</h1>
           <p className="text-sm font-medium text-slate-400 max-w-2xl uppercase tracking-widest leading-relaxed">
-            Provide precise details including photos and location for immediate administrative attention.
+            Provide tactical details and digital evidence for prioritized enforcement response.
           </p>
         </div>
       </header>
 
        <div className="w-full">
-         <ComplaintForm user={user} onSuccess={() => window.location.href = '/citizen/dashboard'} />
+         <ComplaintForm user={user} onSuccess={() => navigate('/citizen/dashboard')} />
        </div>
     </div>
   );

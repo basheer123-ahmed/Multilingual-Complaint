@@ -31,10 +31,37 @@ const userSchema = new mongoose.Schema({
     enum: ['CITIZEN', 'OFFICER', 'ADMIN'],
     default: 'CITIZEN'
   },
+  rank: {
+    type: String,
+    enum: [
+      'DGP', 'ADGP', 'IG', 'DIG', 'SP', 'ASP', 'DSP', 
+      'Inspector', 'Sub-Inspector (SI)', 'Assistant Sub-Inspector (ASI)', 
+      'Head Constable', 'Constable'
+    ],
+    default: null
+  },
+  active_cases_count: {
+    type: Number,
+    default: 0
+  },
+  availability_status: {
+    type: String,
+    enum: ['Available', 'Busy', 'Offline'],
+    default: 'Available'
+  },
   departmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Department',
     default: null
+  },
+  officerId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
+  dob: {
+    type: Date,
+    required: [true, 'Please provide your date of birth']
   },
   createdAt: {
     type: Date,

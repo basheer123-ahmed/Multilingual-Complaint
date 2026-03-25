@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Building, ShieldCheck, AlertCircle } from 'lucide-react';
+import { X, UserPlus, Building, ShieldCheck, AlertCircle, Zap } from 'lucide-react';
 
 const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
   const [departments, setDepartments] = useState([]);
@@ -11,6 +11,63 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [suggestion, setSuggestion] = useState(null);
+
+  useEffect(() => {
+    if (complaint && departments.length > 0 && officers.length > 0) {
+      let targetDivisionName = '';
+      const cat = complaint.category || '';
+      
+      if (['Theft', 'Missing Person'].includes(cat)) targetDivisionName = 'Crime Division';
+      else if (cat === 'Cyber Crime') targetDivisionName = 'Cyber Crime Cell';
+      else if (cat.includes('Harassment') || cat === 'Domestic Violence') targetDivisionName = 'Women & Child Safety Unit';
+      else if (cat === 'Accident') targetDivisionName = 'Traffic Control Unit';
+      else if (cat === 'Suspicious Activity') targetDivisionName = 'Intelligence & Surveillance Unit';
+      else targetDivisionName = 'Patrol Unit';
+
+      const targetDept = departments.find(d => d.name.toLowerCase() === targetDivisionName.toLowerCase());
+      
+      if (targetDept) {
+         let deptOfficers = officers.filter(o => (o.departmentId?._id || o.departmentId) === targetDept._id);
+         
+         // Filter by Availability
+         const available = deptOfficers.filter(o => o.availability_status === 'Available' || !o.availability_status);
+         if (available.length > 0) deptOfficers = available;
+
+         // Sort by Workload
+         deptOfficers.sort((a, b) => (a.active_cases_count || 0) - (b.active_cases_count || 0));
+
+         // Match priority with rank
+         const priority = complaint.priority || 'Medium';
+         let preferredRanks = [];
+         if (priority === 'High' || priority === 'Critical') preferredRanks = ['Inspector', 'Sub-Inspector (SI)', 'DSP', 'SP'];
+         else if (priority === 'Medium') preferredRanks = ['Sub-Inspector (SI)', 'Assistant Sub-Inspector (ASI)'];
+         else preferredRanks = ['Head Constable', 'Constable'];
+
+         let bestCandidate = deptOfficers.find(o => preferredRanks.includes(o.rank));
+         let reasonBullets = [];
+
+         reasonBullets.push(`Matches ${targetDept.name} classification`);
+
+         if (bestCandidate) {
+            reasonBullets.push(`Optimal rank match for ${priority} priority alert`);
+            reasonBullets.push(`Optimal workload capacity (${bestCandidate.active_cases_count || 0} active cases)`);
+         } else if (deptOfficers.length > 0) {
+            bestCandidate = deptOfficers[0];
+            reasonBullets.push(`Lowest workload available (${bestCandidate.active_cases_count || 0} active cases)`);
+         }
+
+         if (bestCandidate) {
+            reasonBullets.push(`Currently marked as Available for assignment`);
+            setSuggestion({
+               department: targetDept,
+               officer: bestCandidate,
+               reasonBullets
+            });
+         }
+      }
+    }
+  }, [complaint, departments, officers]);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +117,24 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
     }
   };
 
+  const handleAssignSuggest = async (suggest) => {
+    setSubmitting(true);
+    setError('');
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.put(`/api/admin/assign/${complaint._id}`, {
+        departmentId: suggest.department._id,
+        officerId: suggest.officer._id
+      }, config);
+      onAssigned();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Authorization error: Failed to commit assignment.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!complaint) return null;
 
   const filteredOfficers = officers.filter(o => {
@@ -80,43 +155,82 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
           ></motion.div>
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-3xl overflow-hidden border border-slate-100"
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-4xl flex flex-col max-h-[88vh] border border-slate-100 overflow-hidden"
           >
-            <div className="p-8 md:p-12 flex flex-col gap-8">
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-2 py-1 rounded w-max">Mission Assignment</span>
-                  <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Personnel Allocation</h2>
-                </div>
-                <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:text-slate-600 rounded-xl transition-colors">
-                  <X size={20} />
-                </button>
+            <div className="flex justify-between items-start p-6 md:p-8 pb-3 shrink-0 bg-white border-b border-slate-50 z-10">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-2 py-0.5 rounded w-max">Mission Assignment</span>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Personnel Allocation</h2>
               </div>
+              <button onClick={onClose} className="p-1.5 bg-slate-50 text-slate-400 hover:text-slate-600 rounded-lg transition-colors shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6 md:p-8 pt-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
 
               {error && (
-                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in fade-in zoom-in duration-300">
-                  <AlertCircle size={16} />
+                <div className="bg-rose-50 border border-rose-100 p-3.5 rounded-xl flex items-center gap-2.5 text-rose-600 text-[11px] font-bold animate-in fade-in zoom-in duration-300">
+                  <AlertCircle size={14} />
                   {error}
                 </div>
               )}
 
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Authority Cluster</label>
+              {suggestion && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-primary-50/50 border border-primary-100 p-5 rounded-[1.5rem] flex flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                     <Zap size={14} className="text-primary-600" />
+                     <span className="text-[9px] font-black text-primary-600 uppercase tracking-widest">AI Assignment Suggestion</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pb-2 border-b border-primary-100/30">
+                     <div className="flex flex-col gap-0.5">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Division</span>
+                        <span className="text-[11px] font-black text-slate-900">{suggestion.department.name}</span>
+                     </div>
+                     <div className="flex flex-col gap-0.5">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Strategic Asset</span>
+                        <span className="text-[11px] font-black text-slate-900">{suggestion.officer.name}</span>
+                     </div>
+                     <div className="flex flex-col gap-0.5">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Rank Match</span>
+                        <span className="text-[11px] font-black text-slate-900">{suggestion.officer.rank || 'CONSTABLE'}</span>
+                     </div>
+                     <div className="flex flex-col gap-0.5">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Cases</span>
+                        <span className="text-[11px] font-black text-slate-900">{suggestion.officer.active_cases_count || 0}</span>
+                     </div>
+                  </div>
+                  <div className="bg-white/60 p-3.5 rounded-lg border border-primary-100 text-[10px] font-medium text-slate-700 leading-snug flex flex-col gap-1.5">
+                     <span className="font-bold text-slate-900">Selection Rationale:</span>
+                     <ul className="list-disc pl-3.5 flex flex-col gap-0.5 opacity-80">
+                        {suggestion.reasonBullets.map((bullet, idx) => (
+                           <li key={idx} className="tracking-tight">{bullet}</li>
+                        ))}
+                     </ul>
+                  </div>
+                  <button 
+                    onClick={() => handleAssignSuggest(suggestion)} 
+                    disabled={submitting}
+                    className="w-full bg-slate-900 hover:bg-primary-600 text-white py-2.5 mt-0.5 rounded-lg text-[9px] font-black tracking-[0.2em] uppercase transition-colors active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Zap size={12} /> Auto Deployment
+                  </button>
+                </motion.div>
+              )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Operation Sector</label>
                   <div className="relative group">
-                    <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                    <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors pointer-events-none" size={16} />
                     <select
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-slate-700 appearance-none cursor-pointer"
+                      className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-[11px] text-slate-700 cursor-pointer"
                       value={selectedDept}
-                      onChange={(e) => {
-                        setSelectedDept(e.target.value);
-                        setSelectedOfficer('');
-                      }}
+                      onChange={(e) => setSelectedDept(e.target.value)}
                     >
-                      <option value="">Select Departmental Branch</option>
+                      <option value="">Select Precinct Division</option>
                       {departments.map((dept) => (
                         <option key={dept._id} value={dept._id}>{dept.name}</option>
                       ))}
@@ -124,47 +238,53 @@ const AssignmentModal = ({ isOpen, onClose, complaint, user, onAssigned }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Designated Officer</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Designated Personnel</label>
                   <div className="relative group">
-                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                    <UserPlus className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors pointer-events-none" size={16} />
                     <select
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-slate-700 appearance-none cursor-pointer disabled:opacity-50"
+                      className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-[11px] text-slate-700 cursor-pointer"
                       value={selectedOfficer}
                       onChange={(e) => setSelectedOfficer(e.target.value)}
-                      disabled={!selectedDept}
                     >
-                      <option value="">Select Field Agent</option>
-                      {filteredOfficers.map((off) => (
-                        <option key={off._id} value={off._id}>{off.name} ({off.email})</option>
-                      ))}
+                      <option value="">Select Tactical Personnel</option>
+                      {selectedDept && (
+                        <optgroup label="Sector Specialists">
+                          {officers.filter(o => (o.departmentId?._id || o.departmentId) === selectedDept).map(off => (
+                            <option key={off._id} value={off._id}>{off.rank || 'CONSTABLE'} {off.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label={selectedDept ? "Cross-Sector Personnel" : "All Personnel"}>
+                        {officers.filter(o => !selectedDept || (o.departmentId?._id || o.departmentId) !== selectedDept).map(off => (
+                          <option key={off._id} value={off._id}>{off.name} [{off.departmentId?.name || 'Unallocated'}]</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
-                  {!selectedDept && <span className="text-[10px] text-primary-500 font-bold px-1">Initialize department cluster first.</span>}
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-4 pt-2">
+              <div className="flex flex-col gap-3.5 pt-1">
                 <button
                   onClick={handleAssign}
-                  disabled={submitting || loading}
-                  className="btn-primary py-4 font-bold text-base shadow-xl shadow-primary-500/20 flex items-center justify-center gap-2 group w-full"
+                  disabled={submitting}
+                  className="bg-primary-600 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary-500/20 hover:bg-slate-900 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 w-full"
                 >
                   {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   ) : (
                     <>
-                      <ShieldCheck size={18} />
+                      <ShieldCheck size={16} />
                       <span>Commit Deployment</span>
                     </>
                   )}
                 </button>
-                <div className="flex items-center justify-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <div className="flex items-center justify-center gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-80">
                   <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> System Validated</div>
                   <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Traceable ID</div>
                 </div>
+                </div>
               </div>
-            </div>
           </motion.div>
         </div>
       )}

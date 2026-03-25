@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const statusHistorySchema = new mongoose.Schema({
   status: {
     type: String,
-    enum: ['Submitted', 'Under Review', 'Assigned', 'In Progress', 'Resolved', 'Closed'],
     required: true
   },
   remarks: {
@@ -43,6 +42,15 @@ const complaintSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  originalDescription: {
+    type: String
+  },
+  detectedLanguage: {
+    type: String
+  },
+  translatedText: {
+    type: String
+  },
   latitude: {
     type: Number,
     required: true
@@ -50,6 +58,15 @@ const complaintSchema = new mongoose.Schema({
   longitude: {
     type: Number,
     required: true
+  },
+  firData: {
+    summary: String,
+    case_type: String,
+    priority: String,
+    time: String,
+    location: String,
+    fir_description: String,
+    generatedAt: Date
   },
   address: {
     type: String
@@ -59,7 +76,6 @@ const complaintSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ['Submitted', 'Under Review', 'Assigned', 'In Progress', 'Resolved', 'Closed'],
     default: 'Submitted'
   },
   assignedDepartmentId: {
@@ -69,6 +85,9 @@ const complaintSchema = new mongoose.Schema({
   assignedOfficerUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  resolutionEvidenceUrl: {
+    type: String
   },
   remarks: [{
     officer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

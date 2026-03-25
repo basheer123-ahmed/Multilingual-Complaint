@@ -41,4 +41,30 @@ const createDepartment = async (req, res) => {
   }
 };
 
-module.exports = { getDepartments, createDepartment };
+// @desc    Delete a department
+// @route   DELETE /api/departments/:id
+// @access  Private (Admin)
+const deleteDepartment = async (req, res) => {
+  try {
+    const department = await Department.findById(req.params.id);
+
+    if (!department) {
+      return res.status(404).json({ message: 'Department not found' });
+    }
+
+    // Safety cleanup: Update all users (officers) belonging to this department
+    const User = require('../models/User'); // Import here to avoid circular dependency if any
+    await User.updateMany(
+      { departmentId: department._id },
+      { $set: { departmentId: null } }
+    );
+
+    await Department.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Department decommissioned successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getDepartments, createDepartment, deleteDepartment };

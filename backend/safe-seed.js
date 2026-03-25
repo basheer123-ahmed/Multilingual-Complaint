@@ -9,7 +9,7 @@ dotenv.config({ path: './.env' });
 
 const seedData = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/citizen_grievance_portal';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/citizen_grievance_portal';
     await mongoose.connect(mongoUri);
     console.log('Seed: Connected to MongoDB');
 
@@ -37,34 +37,12 @@ const seedData = async () => {
         email: 'admin@city.gov',
         password: 'password123',
         role: 'ADMIN',
-        phone: '1234567890'
+        phone: '1234567890',
+        dob: '1980-01-01'
       });
     }
 
-    // Create Officers
-    let officer1 = await User.findOne({ email: 'john@pwd.gov' });
-    if (!officer1) {
-      officer1 = await User.create({
-        name: 'Officer John',
-        email: 'john@pwd.gov',
-        password: 'password123',
-        role: 'OFFICER',
-        phone: '9998887776',
-        departmentId: dept1._id
-      });
-    }
-
-    let officer2 = await User.findOne({ email: 'sarah@sani.gov' });
-    if (!officer2) {
-      officer2 = await User.create({
-        name: 'Officer Sarah',
-        email: 'sarah@sani.gov',
-        password: 'password123',
-        role: 'OFFICER',
-        phone: '1112223334',
-        departmentId: dept2._id
-      });
-    }
+    // Removed dummy officers John and Sarah
 
     // Create Citizen
     let citizen = await User.findOne({ email: 'alex@gmail.com' });
@@ -74,7 +52,8 @@ const seedData = async () => {
         email: 'alex@gmail.com',
         password: 'password123',
         role: 'CITIZEN',
-        phone: '5554443332'
+        phone: '5554443332',
+        dob: '1995-05-15'
       });
     }
 

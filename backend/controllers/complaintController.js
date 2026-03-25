@@ -5,7 +5,7 @@ const User = require('../models/User');
 // @route   POST /api/complaints
 // @access  Private (Citizen)
 const createComplaint = async (req, res) => {
-  const { category, description, latitude, longitude, address, location, severity, evidenceUrls } = req.body;
+  const { category, description, latitude, longitude, address, location, severity, evidenceUrls, originalDescription, detectedLanguage, translatedText } = req.body;
 
   try {
     // Generate simple complain ID: COMP-timestamp
@@ -28,6 +28,9 @@ const createComplaint = async (req, res) => {
       evidenceUrls: evidenceUrls || [],
       priority,
       status: 'Submitted',
+      originalDescription: originalDescription || description,
+      detectedLanguage: detectedLanguage || 'English',
+      translatedText: translatedText || description,
       statusHistory: [{ status: 'Submitted', remarks: 'Complaint submitted by citizen' }]
     });
 
@@ -49,7 +52,7 @@ const getComplaints = async (req, res) => {
 
     const complaints = await Complaint.find(query)
       .populate('citizenUserId', 'name email phone')
-      .populate('assignedOfficerUserId', 'name')
+      .populate('assignedOfficerUserId', 'name rank')
       .populate('assignedDepartmentId', 'name')
       .sort({ createdAt: -1 });
 
@@ -79,7 +82,7 @@ const getComplaintById = async (req, res) => {
   try {
     const complaint = await Complaint.findById(req.params.id)
       .populate('citizenUserId', 'name email phone')
-      .populate('assignedOfficerUserId', 'name')
+      .populate('assignedOfficerUserId', 'name rank')
       .populate('assignedDepartmentId', 'name');
 
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
@@ -93,18 +96,34 @@ const getComplaintById = async (req, res) => {
 // @route   PUT /api/complaints/:id
 // @access  Private (Officer/Admin)
 const updateComplaintStatus = async (req, res) => {
-  const { status, remarks } = req.body;
+  const { status, remarks, resolutionEvidenceUrl } = req.body;
 
   try {
+    console.log(`Command received: Update Complaint ${req.params.id} to ${status}`);
+    if (!req.user) {
+        console.error("Authorization check failed: req.user is missing.");
+        return res.status(401).json({ message: "Authentication required for this protocol." });
+    }
+
     const complaint = await Complaint.findById(req.params.id);
 
-    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+    if (!complaint) {
+        console.error(`Dossier not found for ID: ${req.params.id}`);
+        return res.status(404).json({ message: 'Requested investigation dossier not found.' });
+    }
 
-    // Validate status transitions if needed
+    console.log(`Previous Status: ${complaint.status}, New Target: ${status}`);
+
+    // Update root fields
     complaint.status = status;
+    if (resolutionEvidenceUrl) {
+      complaint.resolutionEvidenceUrl = resolutionEvidenceUrl;
+    }
+
+    // Update History with safely validated metadata
     complaint.statusHistory.push({
       status,
-      remarks,
+      remarks: remarks || 'Manual state transition committed by officer.',
       updatedBy: req.user._id
     });
 
@@ -115,10 +134,21 @@ const updateComplaintStatus = async (req, res) => {
       });
     }
 
+    if (status === 'Completed') {
+      complaint.status = 'Feedback Pending';
+      complaint.statusHistory.push({
+        status: 'Feedback Pending',
+        remarks: 'System automatically moved to Feedback Pending sequence.',
+        updatedBy: req.user._id
+      });
+    }
+
     await complaint.save();
+    console.log(`Status transition SUCCESS: ${complaint.complaintId} updated.`);
     res.json(complaint);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("CRITICAL Status Update Error:", error);
+    res.status(500).json({ message: "System failed to commit status update.", details: error.message });
   }
 };
 
@@ -158,19 +188,25 @@ const rateComplaint = async (req, res) => {
     const complaint = await Complaint.findById(req.params.id);
 
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-    
+
     // Check if user is the one who submitted the complaint
     if (complaint.citizenUserId.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Not authorized to rate this complaint' });
     }
 
     // Only resolved complaints can be rated
-    if (complaint.status !== 'Resolved' && complaint.status !== 'Closed') {
-      return res.status(400).json({ message: 'Only resolved complaints can be rated' });
+    if (!['Resolved', 'Closed', 'Completed', 'Feedback Pending'].includes(complaint.status)) {
+      return res.status(400).json({ message: 'Only completed/resolved complaints can be rated' });
     }
 
     complaint.rating = rating;
     complaint.feedback = feedback;
+    complaint.status = 'Resolved';
+    complaint.statusHistory.push({
+      status: 'Resolved',
+      remarks: 'Citizen provided rating and feedback. Protocol resolved.',
+      updatedBy: req.user._id
+    });
 
     await complaint.save();
     res.json(complaint);
@@ -227,6 +263,81 @@ const getGeneralFeedbacks = async (req, res) => {
   }
 };
 
+// @desc    Analyze complaint text (Language detection + Translation)
+// @route   POST /api/complaints/analyze-complaint
+// @access  Private
+const analyzeComplaint = async (req, res) => {
+  const { text } = req.body;
+
+  try {
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(400).json({ message: "GROQ_API_KEY is not configured." });
+    }
+
+    const systemPrompt = `Analyze the given complaint (which may be in English, Hindi, Telugu, or transliterated vernacular like 'Hinglish' or 'Telugish'). 
+    Generate a structured FIR police report based on the input.
+
+    SPECIFIC IDENTIFICATION RULES:
+    1. Property vs. Person: If the input mentions "gold", "money", "phone", "bike", or other items being "miss", "lost", or "stolen", categorize as 'Theft'. NEVER categorize property loss as 'Missing Person'.
+    2. 'Missing Person' is ONLY for humans (e.g., "son", "daughter", "friend", "father" is missing).
+    3. 'Hinglish'/'Telugish' detection: Some users write regional languages using English alphabets (e.g., 'naa gold miss cheskunna' means 'I lost my gold' in Telugu). Detected that accurately.
+
+    Return JSON ONLY with:
+    - case_type (from: ['Theft', 'Missing Person', 'Cyber Crime', 'Harassment', 'Accident', 'Suspicious Activity', 'Other'])
+    - priority (High/Medium/Low)
+    - summary (1-2 lines concise overview)
+    - fir_description (Detailed official police description in English)
+    - time (extracted time or "Not specified")
+    - location (extracted location or "Not specified")
+    - detected_language (detected language name, e.g., 'Telugu (Transliterated)')
+    - translated_text (A FAITHFUL, LITERAL English translation of the original input)
+
+    Rules:
+    - fir_description should be a formal police report entry.
+    - translated_text MUST be a direct translation, not a summary.
+    - If details are missing, do not hallucinate specific names or locations.
+
+    Example input: "naa gold miss cheskunna"
+    Example output:
+    {
+      "detected_language": "Telugu (Transliterated)",
+      "translated_text": "I have lost my gold.",
+      "case_type": "Theft",
+      "priority": "Medium",
+      "time": "Not specified",
+      "location": "Not specified",
+      "summary": "Report of lost/stolen gold jewelry.",
+      "fir_description": "The complainant reports the loss of gold property. No specific time or location of occurrence was provided in the initial statement."
+    }`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        response_format: { type: "json_object" },
+        messages: [{ role: 'user', content: `${systemPrompt}\n\nInput: ${text}` }],
+        temperature: 0
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Groq API Error: ${err}`);
+    }
+
+    const data = await response.json();
+    const result = JSON.parse(data.choices[0].message.content);
+    res.json(result);
+  } catch (error) {
+    console.error("AI Analysis Error:", error);
+    res.status(500).json({ message: "Analysis failed." });
+  }
+};
+
 module.exports = {
   createComplaint,
   getComplaints,
@@ -237,5 +348,6 @@ module.exports = {
   rateComplaint,
   getAssignedComplaints,
   submitGeneralFeedback,
-  getGeneralFeedbacks
+  getGeneralFeedbacks,
+  analyzeComplaint
 };

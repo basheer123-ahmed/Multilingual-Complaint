@@ -13,12 +13,20 @@ const assignComplaint = async (req, res) => {
 
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
+    const oldOfficerId = complaint.assignedOfficerUserId;
+    if (oldOfficerId && oldOfficerId.toString() !== officerId) {
+       await User.findByIdAndUpdate(oldOfficerId, { $inc: { active_cases_count: -1 } });
+    }
+    if (!oldOfficerId || oldOfficerId.toString() !== officerId) {
+       await User.findByIdAndUpdate(officerId, { $inc: { active_cases_count: 1 } });
+    }
+
     complaint.assignedDepartmentId = departmentId;
     complaint.assignedOfficerUserId = officerId;
     complaint.status = 'Assigned';
     complaint.statusHistory.push({
       status: 'Assigned',
-      remarks: 'Complaint assigned to officer'
+      remarks: 'Mission deployed to designated Tactical Personnel.'
     });
 
     await complaint.save();
@@ -86,7 +94,7 @@ const getDashboardAnalytics = async (req, res) => {
     ]);
 
     // Officer Performance
-    const officers = await User.find({ role: 'OFFICER' }).select('name');
+    const officers = await User.find({ role: 'OFFICER' }).select('name rank');
     const officerPerformance = await Promise.all(officers.map(async (officer) => {
       const stats = await Complaint.aggregate([
         { $match: { assignedOfficerUserId: officer._id } },
@@ -107,10 +115,12 @@ const getDashboardAnalytics = async (req, res) => {
       }, {});
 
       return {
+        _id: officer._id,
         name: officer.name,
-        assigned: (counts['Assigned'] || 0) + (counts['In Progress'] || 0) + (counts['Resolved'] || 0) + (counts['Closed'] || 0),
-        resolved: (counts['Resolved'] || 0) + (counts['Closed'] || 0),
-        inProgress: counts['In Progress'] || 0,
+        rank: officer.rank || 'CONSTABLE',
+        assigned: (counts['Assigned'] || counts['Submitted'] || 0),
+        resolved: (counts['Completed'] || 0) + (counts['Feedback Pending'] || 0) + (counts['Resolved'] || 0) + (counts['Closed'] || 0),
+        inProgress: (counts['Investigation Ongoing'] || 0) + (counts['Evidence Secured'] || 0),
         avgRating: ratingData[0]?.avgRating ? Math.round(ratingData[0].avgRating * 10) / 10 : 0
       };
     }));
@@ -136,7 +146,7 @@ const getDashboardAnalytics = async (req, res) => {
 const getOfficers = async (req, res) => {
   try {
     const officers = await User.find({ role: 'OFFICER' })
-      .select('name email departmentId')
+      .select('name email departmentId rank active_cases_count availability_status')
       .populate('departmentId', 'name')
       .lean();
 
@@ -149,7 +159,7 @@ const getOfficers = async (req, res) => {
             _id: null,
             avgRating: { $avg: '$rating' },
             resolvedCount: {
-              $sum: { $cond: [{ $eq: ['$status', 'Resolved'] }, 1, 0] }
+              $sum: { $cond: [{ $in: ['$status', ['Completed', 'Feedback Pending', 'Resolved', 'Closed']] }, 1, 0] }
             }
           }
         }
@@ -200,5 +210,33 @@ const updateOfficerDepartment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Attach AI-generated FIR to complaint
+// @route   PUT /api/admin/fir/:id
+// @access  Private (Admin)
+const attachFIR = async (req, res) => {
+  const { firData } = req.body;
 
-module.exports = { assignComplaint, getDashboardAnalytics, getOfficers, updateOfficerDepartment };
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+    complaint.firData = {
+      ...firData,
+      generatedAt: new Date()
+    };
+    
+    complaint.statusHistory.push({
+      status: complaint.status,
+      remarks: 'Automated AI Executive FIR generated and attached to case dossier.',
+      updatedBy: req.user._id
+    });
+
+    await complaint.save();
+    res.json(complaint);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { assignComplaint, getDashboardAnalytics, getOfficers, updateOfficerDepartment, attachFIR };

@@ -18,21 +18,21 @@ const DashboardLayout = ({ user, setUser }) => {
 
       <motion.main
         initial={false}
-        animate={{ marginLeft: isCollapsed ? 88 : 280 }}
+        animate={{ marginLeft: isCollapsed ? 80 : 250 }}
         className="flex-1 relative min-h-screen transition-all duration-500"
       >
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-3 bg-white fixed top-6 z-[60] rounded-2xl shadow-xl border border-slate-100 hover:bg-slate-50 transition-all active:scale-95 text-slate-500"
+          className="p-2.5 bg-white fixed top-5 z-[60] rounded-xl shadow-xl border border-slate-100 hover:bg-slate-50 transition-all active:scale-95 text-slate-500"
           style={{ 
-            left: isCollapsed ? '108px' : '300px',
+            left: isCollapsed ? '100px' : '270px',
             transition: 'left 0.5s ease-in-out'
           }}
         >
-          {isCollapsed ? <Menu size={20} /> : <X size={20} />}
+          {isCollapsed ? <Menu size={18} /> : <X size={18} />}
         </button>
 
-        <div className="max-w-[1500px] mx-auto p-10 pt-24 h-full">
+        <div className="max-w-[1500px] mx-auto p-8 pt-20 h-full">
           <Outlet />
         </div>
       </motion.main>

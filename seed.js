@@ -39,23 +39,7 @@ const seedData = async () => {
     });
 
     // Create Officers
-    const officer1 = await User.create({
-      name: 'Officer John',
-      email: 'john@pwd.gov',
-      password: 'password123',
-      role: 'OFFICER',
-      phone: '9998887776',
-      departmentId: dept1._id
-    });
-
-    const officer2 = await User.create({
-      name: 'Officer Sarah',
-      email: 'sarah@sani.gov',
-      password: 'password123',
-      role: 'OFFICER',
-      phone: '1112223334',
-      departmentId: dept2._id
-    });
+    // (Removed dummy officers John and Sarah)
 
     // Create Citizen
     const citizen = await User.create({
@@ -79,7 +63,6 @@ const seedData = async () => {
         status: 'Assigned',
         priority: 'High',
         assignedDepartmentId: dept1._id,
-        assignedOfficerUserId: officer1._id,
         statusHistory: [{ status: 'Submitted' }, { status: 'Under Review' }, { status: 'Assigned' }]
       },
       {

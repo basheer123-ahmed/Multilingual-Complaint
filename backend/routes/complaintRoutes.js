@@ -9,7 +9,8 @@ const {
   rateComplaint,
   getAssignedComplaints,
   submitGeneralFeedback,
-  getGeneralFeedbacks
+  getGeneralFeedbacks,
+  analyzeComplaint
 } = require('../controllers/complaintController');
 const { protect, officer, admin } = require('../middlewares/authMiddleware');
 
@@ -25,6 +26,7 @@ router.get('/hotspots', protect, admin, getHotspots);
 router.put('/:id/rate', protect, rateComplaint);
 router.post('/platform-feedback', protect, submitGeneralFeedback);
 router.get('/platform-feedback', protect, getGeneralFeedbacks);
+router.post('/analyze-complaint', protect, analyzeComplaint);
 
 router.route('/:id')
   .get(protect, getComplaintById)

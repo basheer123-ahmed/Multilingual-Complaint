@@ -251,6 +251,9 @@ const CitizenDashboard = ({ user }) => {
         isOpen={!!selectedComplaint} 
         onClose={() => setSelectedComplaint(null)} 
         complaint={selectedComplaint} 
+        user={user}
+        role="CITIZEN"
+        onUpdate={fetchRecentComplaints}
       />
     </motion.div>
   );

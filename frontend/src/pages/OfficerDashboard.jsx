@@ -20,6 +20,7 @@ import {
   Info
 } from 'lucide-react';
 import ComplaintDetailsModal from '../components/ComplaintDetailsModal';
+import AIAssistantPage from './AIAssistantPage';
 
 const OfficerDashboard = ({ user }) => {
   const [complaints, setComplaints] = useState([]);
@@ -61,9 +62,9 @@ const OfficerDashboard = ({ user }) => {
   }
 
   const stats = [
-    { label: 'Pending Action', count: complaints.filter(c => c.status === 'Assigned').length, icon: <Zap size={20} />, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Active Work', count: complaints.filter(c => c.status === 'In Progress').length, icon: <Clock size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Completed Today', count: complaints.filter(c => c.status === 'Resolved').length, icon: <CheckCircle2 size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50' }
+    { label: 'Pending Action', count: complaints.filter(c => c.status === 'Submitted').length, icon: <Zap size={20} />, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Investigation Ongoing', count: complaints.filter(c => c.status === 'Investigation Ongoing').length, icon: <Clock size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Resolved Cases', count: complaints.filter(c => ['Resolved', 'Closed'].includes(c.status)).length, icon: <CheckCircle2 size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50' }
   ];
 
   const getPriorityBadge = (priority) => {
@@ -74,22 +75,22 @@ const OfficerDashboard = ({ user }) => {
   };
 
   const Overview = () => (
-    <div className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <header className="header-box flex flex-col gap-4 relative group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 -mr-20 -mt-20 blur-[100px] rounded-full group-hover:bg-primary-500/20 transition-all duration-1000"></div>
-        <div className="flex flex-col gap-2 relative z-10">
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <header className="header-box flex flex-col gap-3 relative group">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-primary-600/10 -mr-16 -mt-16 blur-[80px] rounded-full group-hover:bg-primary-500/20 transition-all duration-1000"></div>
+        <div className="flex flex-col gap-1.5 relative z-10">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.8)]"></div>
-              <span className="text-[10px] font-black text-primary-400 uppercase tracking-[0.3em]">Command Terminal v4.0</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.7)]"></div>
+              <span className="text-[9px] font-black text-primary-400 uppercase tracking-[0.3em]">Command Terminal v4.0</span>
             </div>
-            <div className="h-[1px] w-20 bg-white/10"></div>
-            <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest uppercase flex items-center gap-2">
+            <div className="h-[1px] w-16 bg-white/10"></div>
+            <span className="text-[9px] font-bold text-slate-500 font-mono tracking-widest uppercase flex items-center gap-2">
               OPERATIONAL
             </span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter leading-none uppercase">Unit Overview</h1>
-          <p className="text-sm font-medium">Strategic deployment summary for <span className="text-primary-400 font-bold">{profile?.department || 'Sector Alpha'}</span> Headquarters.</p>
+          <h1 className="text-3xl font-black tracking-tighter leading-none uppercase">Tactical Overview</h1>
+          <p className="text-xs font-medium">Tactical investigation summary for <span className="text-primary-400 font-bold">{profile?.department || 'Sector Alpha'}</span> Precinct.</p>
         </div>
       </header>
 
@@ -116,7 +117,7 @@ const OfficerDashboard = ({ user }) => {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between px-2">
            <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Deployment Backlog</h2>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Investigation Backlog</h2>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Response Queue</span>
            </div>
            <button onClick={() => navigate('/officer/assigned')} className="text-[10px] font-black text-primary-600 hover:text-primary-700 uppercase tracking-widest flex items-center gap-2 group">
@@ -140,7 +141,7 @@ const OfficerDashboard = ({ user }) => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-8 py-6 text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Reference ID</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Case ID</th>
                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Priority</th>
                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Category</th>
                     <th className="px-8 py-6 text-right"></th>
@@ -189,9 +190,9 @@ const OfficerDashboard = ({ user }) => {
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.3em]">Archive Index</span>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter leading-none uppercase">Deployment Ledger</h2>
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Comprehensive record of all active and historical missions.</p>
+          <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.3em]">Investigation Index</span>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tighter leading-none uppercase">Case Ledger</h2>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Comprehensive record of all active and historical investigations.</p>
         </div>
         <span className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black uppercase tracking-widest">
           <Archive size={12} className="text-primary-500" /> {complaints.length} Records
@@ -203,9 +204,10 @@ const OfficerDashboard = ({ user }) => {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-slate-900 text-white">
-                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.3em] uppercase opacity-60">Mission Ref</th>
-                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.3em] uppercase opacity-60">Classification</th>
-                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.3em] uppercase opacity-60">Field Status</th>
+                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.3em] uppercase opacity-60">Case Ref</th>
+                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Classification</th>
+                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Priority</th>
+                        <th className="px-10 py-7 text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Investigation Status</th>
                         <th className="px-10 py-7 text-right text-[10px] font-black tracking-[0.3em] uppercase opacity-60">Tactical Control</th>
                       </tr>
                     </thead>
@@ -226,16 +228,22 @@ const OfficerDashboard = ({ user }) => {
                             <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{c.category}</span>
                           </td>
                           <td className="px-10 py-7">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                c.priority === 'Critical' || c.priority === 'High' ? 'text-rose-500' :
+                                c.priority === 'Medium' ? 'text-amber-500' : 'text-slate-400'
+                            }`}>{c.priority}</span>
+                          </td>
+                          <td className="px-10 py-7">
                              <div className="flex items-center gap-2">
-                               <span className={`w-2 h-2 rounded-full ${c.status === 'Resolved' ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_10px_rgba(0,0,0,0.1)]`}></span>
-                               <span className={`text-[10px] font-black uppercase tracking-widest ${c.status === 'Resolved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                               <span className={`w-2 h-2 rounded-full ${['Resolved', 'Closed'].includes(c.status) ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_10px_rgba(0,0,0,0.1)]`}></span>
+                               <span className={`text-[10px] font-black uppercase tracking-widest ${['Resolved', 'Closed'].includes(c.status) ? 'text-emerald-600' : 'text-amber-600'}`}>
                                  {c.status}
                                </span>
                              </div>
                           </td>
                           <td className="px-10 py-7 text-right">
-                             <button className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary-600 hover:shadow-xl hover:shadow-primary-500/20 transition-all active:scale-95">
-                               Analyze
+                             <button className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600 hover:shadow-xl hover:shadow-rose-500/20 transition-all active:scale-95">
+                               Investigate
                              </button>
                           </td>
                         </motion.tr>
@@ -278,7 +286,7 @@ const OfficerDashboard = ({ user }) => {
                    </div>
                    <div className="flex items-end justify-between relative z-10">
                       <div className="text-7xl font-black tracking-tighter leading-none">
-                        {complaints.length > 0 ? ((complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length / complaints.length) * 100).toFixed(0) : 0}%
+                        {complaints.length > 0 ? ((complaints.filter(c => ['Completed', 'Feedback Pending', 'Resolved', 'Closed'].includes(c.status)).length / complaints.length) * 100).toFixed(0) : 0}%
                       </div>
                       <div className="flex flex-col items-end text-right">
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
@@ -313,7 +321,7 @@ const OfficerDashboard = ({ user }) => {
                    </div>
                    <div className="flex flex-col pt-4">
                       <div className="text-5xl font-black text-slate-900 tracking-tighter leading-none">
-                         {complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length}
+                         {complaints.filter(c => ['Completed', 'Feedback Pending', 'Resolved', 'Closed'].includes(c.status)).length}
                       </div>
                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3 underline decoration-emerald-400 decoration-2 underline-offset-4">Missions Logged</div>
                    </div>
@@ -334,9 +342,9 @@ const OfficerDashboard = ({ user }) => {
                    </div>
                    
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                      {['Potholes', 'Garbage Overflow', 'Water Leakage', 'Public Safety'].map((cat, idx) => {
+                      {['Theft', 'Missing Person', 'Cyber Crime', 'Harassment'].map((cat, idx) => {
                         const count = complaints.filter(c => c.category === cat).length;
-                        const resolvedCount = complaints.filter(c => c.category === cat && (c.status === 'Resolved' || c.status === 'Closed')).length;
+                        const resolvedCount = complaints.filter(c => c.category === cat && (['Completed', 'Feedback Pending', 'Resolved', 'Closed'].includes(c.status))).length;
                         const efficiency = count > 0 ? (resolvedCount / count) * 100 : 0;
                         
                         return (
@@ -458,7 +466,7 @@ const OfficerDashboard = ({ user }) => {
                    <div className="flex flex-col gap-3 text-center md:text-left">
                       <div className="flex items-center justify-center md:justify-start gap-3">
                         <span className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] bg-primary-50 px-3 py-1 rounded-full border border-primary-100 uppercase">Active Duty</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-100 px-3 py-1 rounded-full uppercase">Badge #4492</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-100 px-3 py-1 rounded-full uppercase">Badge {profile?.officerId || '#PN-WAIT'}</span>
                       </div>
                       <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase">{profile?.name}</h2>
                       <p className="text-slate-500 font-bold font-mono tracking-widest text-sm italic">{profile?.email}</p>
@@ -488,7 +496,7 @@ const OfficerDashboard = ({ user }) => {
                              <ShieldCheck size={22} />
                            </div>
                            <div className="flex flex-col">
-                             <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{profile?.role}</span>
+                             <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{profile?.rank || profile?.role}</span>
                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Authorized</span>
                            </div>
                          </div>

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Image, MapPin, Send, AlertCircle, CheckCircle2, Search } from 'lucide-react';
+import { Image, MapPin, Send, AlertCircle, CheckCircle2, Search, Mic, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Replace default leaflet icon with a custom SVG to avoid image loading issues
@@ -41,6 +41,68 @@ const ComplaintForm = ({ user, onSuccess }) => {
   const [addressSearch, setAddressSearch] = useState('');
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState({ detected_language: '', translated_text: '', case_type: '', priority: '', loading: false });
+
+  const analyzeText = async (text) => {
+    if (!text || text.length < 10) return null;
+    setAiAnalysis(prev => ({ ...prev, loading: true }));
+    try {
+      const { data } = await axios.post('/api/complaints/analyze-complaint', { text }, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      const result = {
+        detected_language: data.detected_language,
+        translated_text: data.translated_text,
+        case_type: data.case_type,
+        priority: data.priority,
+        loading: false
+      };
+      setAiAnalysis(result);
+      return result;
+    } catch (err) {
+      console.error("AI Analysis failed:", err);
+      setAiAnalysis(prev => ({ ...prev, loading: false }));
+      return null;
+    }
+  };
+
+  const startListening = () => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      setError('Voice recognition is not supported in this browser.');
+      return;
+    }
+    const recognition = new SpeechRec();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    // Set to en-IN (English India) which has better tolerance for regional accents/vernaculars in this context
+    recognition.lang = 'en-IN'; 
+
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript;
+      const updatedDescription = formData.description + (formData.description.length > 0 ? ' ' : '') + transcript;
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        description: updatedDescription 
+      }));
+      
+      // Trigger AI Analysis for the whole text to detect and translate clearly
+      analyzeText(updatedDescription);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+  };
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -70,6 +132,15 @@ const ComplaintForm = ({ user, onSuccess }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.description.length < 20) {
@@ -79,8 +150,48 @@ const ComplaintForm = ({ user, onSuccess }) => {
     setLoading(true);
     setError('');
 
+    let currentAnalysis = aiAnalysis;
+    // Trigger live analysis on submit to ensure we have the most up-to-date data
+    const analysisResult = await analyzeText(formData.description);
+    if (analysisResult) {
+      currentAnalysis = analysisResult;
+    }
+
+    if (files.length > 0) {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        try {
+          const base64 = await fileToBase64(file);
+          const { data } = await axios.post('/api/vision/verify', {
+            imageBase64: base64,
+            category: formData.category,
+            description: formData.description
+          }, {
+            headers: { Authorization: `Bearer ${user.token}` }
+          });
+
+          if (!data.match) {
+            setError(`AI Validation Failed: ${data.reason}`);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+           console.error("Vision Verification Error:", err);
+           setError(err.response?.data?.message || 'AI Image Verification failed. Ensure image is clear.');
+           setLoading(false);
+           return;
+        }
+      }
+    }
+
     const payload = {
       ...formData,
+      category: aiAnalysis.case_type || formData.category,
+      severity: (aiAnalysis.priority || formData.severity).toLowerCase(),
+      description: aiAnalysis.translated_text || formData.description,
+      originalDescription: formData.description,
+      detectedLanguage: aiAnalysis.detected_language || 'English',
+      translatedText: aiAnalysis.translated_text || formData.description,
       evidenceUrls: files.map(f => `https://simulated-storage.com/${f.name}`)
     };
 
@@ -175,34 +286,88 @@ const ComplaintForm = ({ user, onSuccess }) => {
 
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Service Directive</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Case Type</label>
               <select
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-black text-[11px] text-slate-800 uppercase tracking-widest shadow-sm appearance-none cursor-pointer"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
-                <option value="Potholes">Potholes Protocol</option>
-                <option value="Garbage Overflow">Sanitation Feed</option>
-                <option value="Water Leakage">Hydraulic Integrity</option>
-                <option value="Streetlight Failure">Illumination Logistics</option>
-                <option value="Public Safety">Security Oversight</option>
-                <option value="Health Hazard">Biorisk Management</option>
-                <option value="Fire">Thermal Intercept</option>
-                <option value="Gas Leaks">Chemical Surveillance</option>
-                <option value="Road Damage">Infrastructure Decay</option>
-                <option value="Other">External Anomaly</option>
+                <option value="Theft">Theft</option>
+                <option value="Missing Person">Missing Person</option>
+                <option value="Cyber Crime">Cyber Crime</option>
+                <option value="Harassment">Harassment / Threat</option>
+                <option value="Accident">Accident</option>
+                <option value="Suspicious Activity">Suspicious Activity</option>
               </select>
             </div>
 
             <div className="flex flex-col gap-3">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Incident Parameters</label>
+              <div className="flex items-center justify-between px-1">
+                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Incident Parameters</label>
+                 <button
+                   type="button"
+                   onClick={startListening}
+                   className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${isListening ? 'text-rose-500 animate-pulse' : 'text-primary-500 hover:text-primary-600'}`}
+                 >
+                   <Mic size={14} /> {isListening ? 'Recording Audio...' : 'Voice Input'}
+                 </button>
+              </div>
               <textarea
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-xs text-slate-700 min-h-[160px] resize-none leading-relaxed placeholder:text-slate-300 shadow-sm"
-                placeholder="REPORT DETAILS: IDENTIFY LANDMARKS, SEVERITY IMPACTS, AND PRECISE DEPLOYMENT PARAMETERS..."
+                placeholder="Enter your complaint in Telugu / Hindi / English..."
                 required
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onBlur={(e) => analyzeText(e.target.value)}
               />
+
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 p-5 bg-slate-900 rounded-2xl border border-white/5 shadow-2xl overflow-hidden mt-4"
+              >
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-primary-400 animate-pulse"></div>
+                      <span className="text-[9px] font-black text-primary-400 uppercase tracking-widest text-white/90">AI Analysis Intelligence</span>
+                   </div>
+                   <button
+                     type="button"
+                     disabled={aiAnalysis.loading || !formData.description}
+                     onClick={() => analyzeText(formData.description)}
+                     className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-30"
+                     title="Refresh Analysis"
+                   >
+                     <RotateCcw size={12} className={aiAnalysis.loading ? 'animate-spin' : ''} />
+                   </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Detected Language</span>
+                      <span className="text-xs font-black text-white uppercase tracking-widest">{aiAnalysis.loading ? 'Analyzing...' : aiAnalysis.detected_language || 'Awaiting Input'}</span>
+                   </div>
+                   <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Case Sentiment</span>
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Calculated</span>
+                   </div>
+                   <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">AI Predicted Category</span>
+                      <span className="text-xs font-black text-primary-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Classifying...' : aiAnalysis.case_type || 'TBD'}</span>
+                   </div>
+                   <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Priority Level</span>
+                      <span className="text-xs font-black text-rose-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Triaging...' : aiAnalysis.priority || 'TBD'}</span>
+                   </div>
+                </div>
+
+                <div className="flex flex-col gap-1 border-t border-white/5 pt-3">
+                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Translated English Script</span>
+                   <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">
+                     {aiAnalysis.loading ? 'Generating semantic English version...' : aiAnalysis.translated_text || 'Enter parameters to begin translation...'}
+                   </p>
+                </div>
+              </motion.div>
             </div>
 
             <div className="flex flex-col gap-3">
