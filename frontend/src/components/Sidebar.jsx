@@ -53,6 +53,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, user, setUser }) => {
     if (role === 'OFFICER') {
       return [
         { label: 'Field Dashboard', icon: <LayoutDashboard size={20} />, path: '/officer', tagline: 'Command Center' },
+        { label: 'AI Case Assistant', icon: <Bot size={20} />, path: '/officer/ai-assistant', tagline: 'Neural Analysis' },
         { label: 'Task Deployment', icon: <ClipboardList size={20} />, path: '/officer/assigned', tagline: 'Active Missions' },
         { label: 'Efficiency Matrix', icon: <BarChart3 size={20} />, path: '/officer/workload', tagline: 'KPI Oversight' },
         { label: 'Identity Protocol', icon: <User size={20} />, path: '/officer/profile', tagline: 'Credentials' },

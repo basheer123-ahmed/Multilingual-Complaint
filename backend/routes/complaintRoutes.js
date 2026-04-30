@@ -10,11 +10,14 @@ const {
   getAssignedComplaints,
   submitGeneralFeedback,
   getGeneralFeedbacks,
-  analyzeComplaint
+  analyzeComplaint,
+  getPublicStats
 } = require('../controllers/complaintController');
 const { protect, officer, admin } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
+
+router.get('/public-stats', getPublicStats);
 
 router.route('/')
   .post(protect, createComplaint)

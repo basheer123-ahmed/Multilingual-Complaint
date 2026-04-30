@@ -30,6 +30,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const officerRoutes = require('./routes/officerRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const visionRoutes = require('./routes/visionRoutes');
+const ttsRoutes = require('./routes/ttsRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
@@ -39,6 +40,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/officers', officerRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/vision', visionRoutes);
+app.use('/api/tts', ttsRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

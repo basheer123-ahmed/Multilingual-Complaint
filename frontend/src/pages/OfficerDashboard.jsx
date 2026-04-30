@@ -513,6 +513,7 @@ const OfficerDashboard = ({ user }) => {
              </motion.div>
           </div>
         } />
+        <Route path="ai-assistant" element={<AIAssistantPage user={user} />} />
       </Routes>
 
       <ComplaintDetailsModal 

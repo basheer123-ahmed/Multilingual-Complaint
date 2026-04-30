@@ -1,9 +1,56 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Sparkles, BrainCircuit, Mic, FileText, UserCheck, Activity, Brain, ShieldCheck, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+import Hero3D from '../components/Hero3D';
+import axios from 'axios';
+import API_BASE from '../config/api';
 
 const LandingPage = () => {
+  const [stats, setStats] = React.useState({
+    totalComplaints: 1240,
+    resolvedComplaints: 1180,
+    processingSpeed: '2.4s',
+    uptime: '99.9%'
+  });
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/complaints/public-stats`);
+        setStats(res.data);
+      } catch (err) {
+        console.error("Failed to fetch public stats", err);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const CountUp = ({ end, duration = 2, suffix = "", decimals = 0 }) => {
+    const [count, setCount] = React.useState(0);
+    const ref = React.useRef(null);
+    const isInView = useInView(ref, { once: true });
+
+    React.useEffect(() => {
+      if (!isInView) return;
+      
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / (duration * 1000), 1);
+        const currentCount = progress * end;
+        setCount(currentCount);
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      
+      window.requestAnimationFrame(step);
+    }, [end, duration, isInView]);
+
+    return <span ref={ref}>{count.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>;
+  };
+
   return (
     <div className="flex flex-col animate-in fade-in duration-1000 bg-white">
       
@@ -12,10 +59,10 @@ const LandingPage = () => {
         HERO SECTION
         ========================================================================================
       */}
-      <section className="relative pt-32 pb-48 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-gradient-to-b from-blue-50/80 via-white to-white rounded-[100%] opacity-80 pointer-events-none blur-3xl z-[-1]" />
-        <div className="absolute top-20 left-10 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] pointer-events-none z-[-1]" />
-        <div className="absolute top-20 right-10 w-80 h-80 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none z-[-1]" />
+      <section className="relative pt-20 pb-24 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[60vh] bg-gradient-to-b from-blue-50/40 via-white to-white rounded-[100%] opacity-80 pointer-events-none blur-3xl z-[-1]" />
+        <div className="absolute top-10 left-10 w-64 h-64 bg-violet-100/20 rounded-full blur-[80px] pointer-events-none z-[-1]" />
+        <div className="absolute top-10 right-10 w-80 h-80 bg-blue-100/20 rounded-full blur-[100px] pointer-events-none z-[-1]" />
 
         <div className="container mx-auto px-6 max-w-7xl relative z-10 flex flex-col lg:flex-row items-center gap-20">
           <div className="flex-1 flex flex-col gap-10 text-center lg:text-left">
@@ -29,10 +76,10 @@ const LandingPage = () => {
             
             <motion.h1 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-5xl md:text-6xl lg:text-[76px] font-black text-slate-900 leading-[1.05] tracking-tight"
+              className="text-5xl md:text-6xl lg:text-[62px] font-black text-slate-900 leading-[1.1] tracking-tight"
             >
               Transforming <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-violet-600">Police Intelligence</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600">Police Intelligence</span>
             </motion.h1>
             
             <motion.p 
@@ -56,15 +103,45 @@ const LandingPage = () => {
           </div>
           
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95, x: 20 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex-1 w-full max-w-2xl relative"
+            initial={{ opacity: 0, scale: 0.9, x: 20 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ duration: 1, delay: 0.2 }}
+            className="flex-1 w-full max-w-2xl h-[500px] lg:h-[600px] relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-violet-50 rounded-[4rem] transform rotate-3 scale-105 -z-10 shadow-lg" />
-            <img 
-              src="/images/citizen_ai_reporting_1774207794930.png" 
-              alt="Citizen reporting complaint to AI" 
-              className="w-full h-auto object-cover rounded-[4rem] shadow-2xl shadow-blue-900/20 border border-white/50 bg-white"
-            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-blue-50 to-indigo-50/50 rounded-[4rem] transform rotate-2 scale-105 -z-10" />
+            <div className="w-full h-full rounded-[3rem] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/80 bg-white/40 backdrop-blur-sm relative">
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 z-0">
+                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+              <div className="relative z-10 w-full h-full">
+                <Hero3D />
+              </div>
+              
+              {/* Floating UI Elements for extra premium feel */}
+              <motion.div 
+                animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-10 right-10 p-4 bg-white/90 backdrop-blur shadow-xl rounded-2xl border border-white/50 z-20 flex items-center gap-3"
+              >
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Status</p>
+                  <p className="text-sm font-black text-slate-900">Optimal (100%)</p>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                animate={{ y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute bottom-12 left-10 p-4 bg-slate-900/90 backdrop-blur shadow-2xl rounded-2xl border border-slate-700/50 z-20 flex items-center gap-3"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Brain size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Neural Link</p>
+                  <p className="text-sm font-black text-white">AI Active</p>
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -74,15 +151,24 @@ const LandingPage = () => {
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
              {[
-               { val: '2s', label: 'Processing Speed' },
-               { val: '100%', label: 'Transparency' },
-               { val: '24/7', label: 'System Uptime' },
-               { val: 'Encryption', label: 'Military-Grade' }
+               { val: 2.4, suffix: 's', label: 'Processing Speed', decimals: 1 },
+               { val: stats.resolvedComplaints, label: 'Cases Resolved' },
+               { val: 99.9, suffix: '%', label: 'System Uptime', decimals: 1 },
+               { val: stats.totalComplaints, label: 'Total Managed' }
              ].map((stat, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                   <h4 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">{stat.val}</h4>
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="flex flex-col gap-2"
+                >
+                   <h4 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+                     <CountUp end={stat.val} suffix={stat.suffix || ""} decimals={stat.decimals || 0} />
+                   </h4>
                    <p className="text-xs font-black text-blue-600 uppercase tracking-widest">{stat.label}</p>
-                </div>
+                </motion.div>
              ))}
           </div>
         </div>

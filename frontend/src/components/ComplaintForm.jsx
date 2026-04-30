@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Image, MapPin, Send, AlertCircle, CheckCircle2, Search, Mic, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoiceFIRRobot from './VoiceFIRRobot';
 
 // Replace default leaflet icon with a custom SVG to avoid image loading issues
 const customIcon = L.divIcon({
@@ -43,6 +44,7 @@ const ComplaintForm = ({ user, onSuccess }) => {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showVoiceFIR, setShowVoiceFIR] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState({ detected_language: '', translated_text: '', case_type: '', priority: '', loading: false });
 
   const analyzeText = async (text) => {
@@ -78,19 +80,19 @@ const ComplaintForm = ({ user, onSuccess }) => {
     recognition.continuous = false;
     recognition.interimResults = false;
     // Set to en-IN (English India) which has better tolerance for regional accents/vernaculars in this context
-    recognition.lang = 'en-IN'; 
+    recognition.lang = 'en-IN';
 
     recognition.onstart = () => setIsListening(true);
-    
+
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       const updatedDescription = formData.description + (formData.description.length > 0 ? ' ' : '') + transcript;
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        description: updatedDescription 
+
+      setFormData(prev => ({
+        ...prev,
+        description: updatedDescription
       }));
-      
+
       // Trigger AI Analysis for the whole text to detect and translate clearly
       analyzeText(updatedDescription);
     };
@@ -103,6 +105,19 @@ const ComplaintForm = ({ user, onSuccess }) => {
     recognition.onend = () => setIsListening(false);
 
     recognition.start();
+  };
+
+  const handleVoiceFIRComplete = (answers, lang) => {
+    const fullText = Object.entries(answers)
+      .map(([k, v]) => `${k.toUpperCase()}: ${v}`)
+      .join('\n');
+
+    setFormData(prev => ({
+      ...prev,
+      description: fullText
+    }));
+    setShowVoiceFIR(false);
+    analyzeText(fullText);
   };
 
   const handleFileChange = (e) => {
@@ -177,10 +192,10 @@ const ComplaintForm = ({ user, onSuccess }) => {
             return;
           }
         } catch (err) {
-           console.error("Vision Verification Error:", err);
-           setError(err.response?.data?.message || 'AI Image Verification failed. Ensure image is clear.');
-           setLoading(false);
-           return;
+          console.error("Vision Verification Error:", err);
+          setError(err.response?.data?.message || 'AI Image Verification failed. Ensure image is clear.');
+          setLoading(false);
+          return;
         }
       }
     }
@@ -244,7 +259,7 @@ const ComplaintForm = ({ user, onSuccess }) => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="card p-10 lg:p-14 flex flex-col gap-12 border-none shadow-3xl shadow-slate-200/50 rounded-[3rem] bg-white/90 backdrop-blur-xl"
@@ -278,11 +293,11 @@ const ComplaintForm = ({ user, onSuccess }) => {
         {/* Left: Form Fields */}
         <div className="lg:col-span-6 flex flex-col gap-8">
           <div className="flex flex-col gap-2 px-1">
-             <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Grievance Intelligence</h2>
-             </div>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Categorize and describe the localized incident.</p>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Grievance Intelligence</h2>
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Categorize and describe the localized incident.</p>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -304,14 +319,14 @@ const ComplaintForm = ({ user, onSuccess }) => {
 
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between px-1">
-                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Incident Parameters</label>
-                 <button
-                   type="button"
-                   onClick={startListening}
-                   className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${isListening ? 'text-rose-500 animate-pulse' : 'text-primary-500 hover:text-primary-600'}`}
-                 >
-                   <Mic size={14} /> {isListening ? 'Recording Audio...' : 'Voice Input'}
-                 </button>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Incident Parameters</label>
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceFIR(true)}
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors text-primary-500 hover:text-primary-600"
+                >
+                  <Mic size={14} /> Voice FIR Assistant
+                </button>
               </div>
               <textarea
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-bold text-xs text-slate-700 min-h-[160px] resize-none leading-relaxed placeholder:text-slate-300 shadow-sm"
@@ -322,51 +337,51 @@ const ComplaintForm = ({ user, onSuccess }) => {
                 onBlur={(e) => analyzeText(e.target.value)}
               />
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col gap-4 p-5 bg-slate-900 rounded-2xl border border-white/5 shadow-2xl overflow-hidden mt-4"
               >
                 <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-primary-400 animate-pulse"></div>
-                      <span className="text-[9px] font-black text-primary-400 uppercase tracking-widest text-white/90">AI Analysis Intelligence</span>
-                   </div>
-                   <button
-                     type="button"
-                     disabled={aiAnalysis.loading || !formData.description}
-                     onClick={() => analyzeText(formData.description)}
-                     className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-30"
-                     title="Refresh Analysis"
-                   >
-                     <RotateCcw size={12} className={aiAnalysis.loading ? 'animate-spin' : ''} />
-                   </button>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-primary-400 animate-pulse"></div>
+                    <span className="text-[9px] font-black text-primary-400 uppercase tracking-widest text-white/90">AI Analysis Intelligence</span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={aiAnalysis.loading || !formData.description}
+                    onClick={() => analyzeText(formData.description)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-30"
+                    title="Refresh Analysis"
+                  >
+                    <RotateCcw size={12} className={aiAnalysis.loading ? 'animate-spin' : ''} />
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                   <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Detected Language</span>
-                      <span className="text-xs font-black text-white uppercase tracking-widest">{aiAnalysis.loading ? 'Analyzing...' : aiAnalysis.detected_language || 'Awaiting Input'}</span>
-                   </div>
-                   <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Case Sentiment</span>
-                      <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Calculated</span>
-                   </div>
-                   <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">AI Predicted Category</span>
-                      <span className="text-xs font-black text-primary-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Classifying...' : aiAnalysis.case_type || 'TBD'}</span>
-                   </div>
-                   <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Priority Level</span>
-                      <span className="text-xs font-black text-rose-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Triaging...' : aiAnalysis.priority || 'TBD'}</span>
-                   </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Detected Language</span>
+                    <span className="text-xs font-black text-white uppercase tracking-widest">{aiAnalysis.loading ? 'Analyzing...' : aiAnalysis.detected_language || 'Awaiting Input'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Case Sentiment</span>
+                    <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Calculated</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">AI Predicted Category</span>
+                    <span className="text-xs font-black text-primary-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Classifying...' : aiAnalysis.case_type || 'TBD'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Priority Level</span>
+                    <span className="text-xs font-black text-rose-400 uppercase tracking-widest">{aiAnalysis.loading ? 'Triaging...' : aiAnalysis.priority || 'TBD'}</span>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1 border-t border-white/5 pt-3">
-                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Translated English Script</span>
-                   <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">
-                     {aiAnalysis.loading ? 'Generating semantic English version...' : aiAnalysis.translated_text || 'Enter parameters to begin translation...'}
-                   </p>
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Translated English Script</span>
+                  <p className="text-[11px] font-bold text-slate-300 leading-relaxed italic">
+                    {aiAnalysis.loading ? 'Generating semantic English version...' : aiAnalysis.translated_text || 'Enter parameters to begin translation...'}
+                  </p>
                 </div>
               </motion.div>
             </div>
@@ -380,8 +395,8 @@ const ComplaintForm = ({ user, onSuccess }) => {
                     type="button"
                     onClick={() => setFormData({ ...formData, severity: level })}
                     className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all active:scale-95 shadow-sm
-                      ${formData.severity === level 
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-200' 
+                      ${formData.severity === level
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-200'
                         : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
                       }`}
                   >
@@ -393,36 +408,36 @@ const ComplaintForm = ({ user, onSuccess }) => {
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-slate-600 px-1">Evidence (Optional)</label>
-              <div 
+              <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`relative border-2 border-dashed rounded-xl p-8 transition-all cursor-pointer group flex flex-col items-center justify-center gap-3
                   ${isDragging ? 'border-primary-500 bg-primary-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
               >
-                  <div className={`flex flex-col items-center gap-2 transition-colors ${isDragging ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
-                    <Image size={24} className={isDragging ? 'animate-bounce' : ''} />
-                    <span className="text-xs font-black uppercase tracking-widest text-center">
-                      {isDragging ? 'Drop Protocol Files' : 'Drag & Drop or Click to Upload'}
-                    </span>
-                    <span className="text-[10px] font-medium opacity-60 uppercase tracking-tighter">Support for JPEG, PNG, WEBP</span>
-                  </div>
-                  <input 
-                    type="file" 
-                    multiple 
-                    className="absolute inset-0 opacity-0 cursor-pointer" 
-                    accept="image/*" 
-                    onChange={handleFileChange}
-                  />
+                <div className={`flex flex-col items-center gap-2 transition-colors ${isDragging ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                  <Image size={24} className={isDragging ? 'animate-bounce' : ''} />
+                  <span className="text-xs font-black uppercase tracking-widest text-center">
+                    {isDragging ? 'Drop Protocol Files' : 'Drag & Drop or Click to Upload'}
+                  </span>
+                  <span className="text-[10px] font-medium opacity-60 uppercase tracking-tighter">Support for JPEG, PNG, WEBP</span>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
               </div>
 
               {files.length > 0 && (
                 <div className="flex flex-wrap gap-3 mt-4">
                   {files.map((file, idx) => (
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      key={idx} 
+                      key={idx}
                       className="relative bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow group"
                     >
                       <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
@@ -432,12 +447,12 @@ const ComplaintForm = ({ user, onSuccess }) => {
                         <span className="text-[10px] font-black text-slate-900 truncate uppercase mt-0.5">{file.name}</span>
                         <span className="text-[8px] font-medium text-slate-400 uppercase tracking-tighter">{(file.size / 1024).toFixed(0)} KB</span>
                       </div>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => removeFile(idx)}
                         className="p-1 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-full transition-colors"
                       >
-                         <AlertCircle size={14} className="rotate-45" />
+                        <AlertCircle size={14} className="rotate-45" />
                       </button>
                     </motion.div>
                   ))}
@@ -450,11 +465,11 @@ const ComplaintForm = ({ user, onSuccess }) => {
         {/* Right: Map Picker */}
         <div className="lg:col-span-6 flex flex-col gap-8">
           <div className="flex flex-col gap-2 px-1">
-             <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Geospatial Locality</h2>
-             </div>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Synchronize precise deployment coordinates.</p>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Geospatial Locality</h2>
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Synchronize precise deployment coordinates.</p>
           </div>
 
           <div className="flex flex-col gap-5 h-full relative z-0">
@@ -471,20 +486,20 @@ const ComplaintForm = ({ user, onSuccess }) => {
             </div>
 
             <div className="flex-1 rounded-[2.5rem] overflow-hidden border border-slate-100 bg-slate-50 relative min-h-[360px] z-10 shadow-inner">
-                <MapContainer
-                  center={[formData.latitude, formData.longitude]}
-                  zoom={15}
-                  zoomControl={false}
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    className="map-grayscale"
-                  />
-                  <Marker position={[formData.latitude, formData.longitude]} icon={customIcon} />
-                  <MapClickHandler />
-                  <MapViewUpdater center={[formData.latitude, formData.longitude]} />
-                </MapContainer>
+              <MapContainer
+                center={[formData.latitude, formData.longitude]}
+                zoom={15}
+                zoomControl={false}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  className="map-grayscale"
+                />
+                <Marker position={[formData.latitude, formData.longitude]} icon={customIcon} />
+                <MapClickHandler />
+                <MapViewUpdater center={[formData.latitude, formData.longitude]} />
+              </MapContainer>
               <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-xl shadow-2xl border border-white/50 p-5 rounded-3xl flex items-center justify-between z-[400] transition-all hover:scale-[1.02]">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -518,6 +533,14 @@ const ComplaintForm = ({ user, onSuccess }) => {
           </div>
         </div>
       </form>
+
+      {showVoiceFIR && (
+        <VoiceFIRRobot
+          onClose={() => setShowVoiceFIR(false)}
+          onComplete={handleVoiceFIRComplete}
+          userProfile={user || {}}
+        />
+      )}
     </motion.div>
   );
 };
