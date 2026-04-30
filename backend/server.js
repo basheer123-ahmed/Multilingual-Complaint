@@ -42,6 +42,13 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/vision', visionRoutes);
 app.use('/api/tts', ttsRoutes);
 
+// Serve Frontend in Production
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});
+
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
